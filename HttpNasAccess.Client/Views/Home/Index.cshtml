@@ -1,0 +1,37 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="jumbotron">
+    <h1>ASP.NET</h1>
+    <p class="lead">HTTP NAS Access Code Sample.</p>
+    </div>
+
+<div class="row">
+    <div class="col-md-12">
+        <h2>Getting started</h2>
+        <p>
+            
+            All the code is located in HomeController.
+            <ul>
+                <li> You would need to update the service account user id and password.</li>
+                <li> You would need to go to each action method and update the Nas Path.</li>
+            </ul>
+        </p>
+        <p>
+            Here are all the operations that can be done using Http NAS.
+            <ul>
+                <li>@Html.ActionLink("Upload", "Upload", "Home")</li>
+                <li>@Html.ActionLink("Download", "Download", "Home")</li>
+                <li>@Html.ActionLink("Delete", "Delete", "Home")</li>
+                <li>@Html.ActionLink("List Files", "ListFileNames", "Home")</li>
+                <li>@Html.ActionLink("List Files and Folders", "ListAll", "Home")</li>
+                <li>@Html.ActionLink("Get Files and Folders Info", "GetInfo", "Home")</li>
+                <li>@Html.ActionLink("Copy Files and Folders to Another NAS", "CopyToAnotherNas", "Home")</li>
+                <li>@Html.ActionLink("Create Folder", "CreateFolder", "Home")</li>
+                <li>@Html.ActionLink("Download Multiple Files into Zip", "DownloadMultiple", "Home")</li>
+                <li>@Html.ActionLink("Rename file", "RenameFile", "Home")</li>
+            </ul>
+        </p>
+    </div>
+</div>
