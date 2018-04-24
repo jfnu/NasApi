@@ -1,0 +1,544 @@
+﻿@using System
+@inherits System.Web.Mvc.WebViewPage
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Azure Pack NAS Api</title>
+
+    <!-- Bootstrap -->
+    <link href="~/content/css/bootstrap.min.css" rel="stylesheet">
+    <link href="~/content/Site.css" rel="stylesheet">
+    <script src="~/scripts/modernizr-2.6.2.js"></script>
+    <script src="~/scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/scripts/bootstrap.min.js"></script>
+   
+  
+    
+</head>
+<body>
+<div class="navbar">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="#/Home">
+                <img src="~/Content/ApplicationLogo.png" width="600px">
+            </a>
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a class="btn btn-info" href="~/Sample/HttpNasAccess.Client.zip">Download Web Sample</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="container body-content">
+    <div class="jumbotron">
+        <p class="lead">Azure Pack NAS Api is developed as solution to handle NAS access for application hosted in Azure Pack.</p>
+    </div>
+<div class="row">
+<div class="col-md">
+    <h4><strong>To get started</strong></h4>
+    For all request:
+    <ul>
+        <li>Need to have Service account and password that has read and write access to your NAS.</li>
+        <li>Need to use MultiPartFormDataContent.</li>
+    </ul>
+</div>
+<br/>
+<div class="col-md">
+    <h4><strong>To download file from NAS</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/download</strong>
+    <br/>
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to downlod file from specific NAS path to local path in web worker</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                //Sample file to download from NAS
+                var fullFileNasPath = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test.txt&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(fullFileNasPath), &quot;FullFilePath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var fileName = response.Content.Headers.ContentDisposition.FileName;
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    //You can save it to local Temp folder in web worker for further processing
+                    var appPath = Server.MapPath(&quot;~\\Temp&quot;);
+                    var localFullPath = string.Format(&quot;{0}\\{1}&quot;, appPath, fileName);
+                    using (var fileStream = System.IO.File.Create(localFullPath))
+                    {
+                        stream.CopyTo(fileStream);
+                    }
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<br />
+<div class="col-md">
+    <h4><strong>To upload file to NAS</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/upload</strong>
+    <br/>
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to upload file from local path in web woker to specific NAS path</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+             //Get it from local
+            var localFileToUpload = Server.MapPath(&quot;~\\Temp\\test.txt&quot;);
+            var fileName = Path.GetFileName(localFileToUpload);
+            FileStream fs = System.IO.File.OpenRead(localFileToUpload);
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                //Can upload more than one file in one request
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas&quot;), &quot;NASPath&quot;},
+                    {new StreamContent(fs), &quot;txtFile&quot;, fileName}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<br/>
+<div class="col-md">
+    <h4><strong>To list file(s) in NAS</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/listfilenames</strong>
+    <br/>
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to list file(s) in NAS</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                var folderInNASToQuery = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(folderInNASToQuery), &quot;NASPath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result =  response.Content.ReadAsStringAsync().Result;
+                    //check  the filenames collection for all the files in NAS
+                    var fileNames = JsonConvert.DeserializeObject<span style="color: #007700">&lt;IEnumerable&lt;string&gt;</span>&gt;(result);
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+    <br />
+<div class="col-md">
+    <h4><strong>To list file(s) and folder(s) in NAS</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/listall</strong>
+    <br />
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to list file(s) and folder(s) in NAS</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                var folderInNASToQuery = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(folderInNASToQuery), &quot;NASPath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result =  response.Content.ReadAsStringAsync().Result;
+                    //check  the filenames collection for all the files in NAS
+                    var fileNames = JsonConvert.DeserializeObject<span style="color: #007700">&lt;IEnumerable&lt;string&gt;</span>&gt;(result);
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+    <br />
+    <div class="col-md">
+        <h4><strong>To get info of file(s) and folder(s) in NAS</strong></h4>
+        Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/getinfo</strong>. The Api will return size, created and modified date time. 
+        <br />
+        <strong>Example:</strong>
+        <section>The following C# web sample code shows how to get created and modified date time. It's using FileDirectoryInfo object that you can get from web sample.</section>
+
+        <div>
+            <table>
+                <tr>
+                    <td>
+                        <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                var folderInNASToQuery = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(folderInNASToQuery), &quot;NASPath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result =  response.Content.ReadAsStringAsync().Result;
+                    //check  the filedirectoryinfo collection for all the files and folders in NAS
+                    var fileNames = JsonConvert.DeserializeObject<span style="color: #007700">&lt;IEnumerable&lt;FileDirectoryInfo&gt;</span>&gt;(result);
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+<br />
+<div class="col-md">
+    <h4><strong>To delete file in NAS</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/delete</strong>
+    <br/>
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to delete file in NAS</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                //Sample file to delete from NAS
+                var fullFileNasPath = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test.txt&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(fullFileNasPath), &quot;FullFilePath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    responseMessage = &quot;yay!&quot;;
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                    responseMessage = message;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<br/>
+<div class="col-md">
+    <h4><strong>To download multiple files from NAS into one zip</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/downloadmultiple</strong>
+    <br />
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to downlod multiple files into one zip from specific NAS path to local path in web worker. 
+        All need to do download files have to be in same NAS Path. As the result of the request, AzureNasTemp folder will be created on the NAS that contains the zip file that can be deleted in future.</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test1.txt&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test2.pdf&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test3.jpeg&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test4.txt&quot;), &quot;FullFilePath&quot;},
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var fileName = response.Content.Headers.ContentDisposition.FileName;
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    //You can save it to local Temp folder in web worker for further processing
+                    var appPath = Server.MapPath(&quot;~\\Temp&quot;);
+                    var localFullPath = string.Format(&quot;{0}\\{1}&quot;, appPath, fileName);
+                    using (var fileStream = System.IO.File.Create(localFullPath))
+                    {
+                        stream.CopyTo(fileStream);
+                    }
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<br />
+<div class="col-md">
+    <h4><strong>To copy file(s) and folder(s) to another folder in NAS drive</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/copytoanothernasdrive</strong>
+    <br />
+    <strong>Example:</strong>
+    <section>
+        The following C# web sample code shows how to copy files and folders within NAS drive.
+    </section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                 var targetFolder = "\\\\nasv0034\\WAPFileTest\\GoodNas\\Folder";
+                
+                var content = new MultipartFormDataContent
+                {
+                    //first item must be the target folder in NAS
+                    {new StringContent(targetFolder), &quot;targetFolderInNas&quot;},
+                     //second item and onward are files or folders to copy
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test1.txt&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test2.pdf&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test3.jpeg&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test4.txt&quot;), &quot;FullFilePath&quot;},
+                    {new StringContent(&quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\folder1&quot;), &quot;FullFilePath&quot;},
+                };
+                var response = await client.PostAsync(uri, content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+    <br />
+<div class="col-md">
+    <h4><strong>To create a folder in NAS</strong></h4>
+    Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/folder/create</strong>
+    <br />
+    <strong>Example:</strong>
+    <section>The following C# web sample code shows how to create a folder in NAS</section>
+
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                var fullFileNasPath = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\NewFolder&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(fullFileNasPath), &quot;FullFilePath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    responseMessage = &quot;yay!&quot;;
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                    responseMessage = message;
+                }
+            }
+</pre>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<br/>
+    <div class="col-md">
+        <h4><strong>To rename a file in NAS</strong></h4>
+        Create POST request to <strong>@Request.Url.AbsoluteUri</strong><strong>nas/renamefile</strong>
+        <br />
+        <strong>Example:</strong>
+        <section>The following C# web sample code shows how to rename a file in NAS</section>
+
+        <div>
+            <table>
+                <tr>
+                    <td>
+                        <pre>
+            var handler = new HttpClientHandler
+            {
+                Credentials = new NetworkCredential(userId, userPassword)
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var uri = new Uri(endpointUrl);
+                var oldFileName = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\test.html&quot;;
+                var newFileName = &quot;\\\\nasv0034\\WAPFileTest\\GoodNas\\testNewName.html&quot;;
+                var content = new MultipartFormDataContent
+                {
+                    {new StringContent(oldFileName), &quot;OldFileNameFullPath&quot;},
+                    {new StringContent(newFileName), &quot;NewFileNameFullPath&quot;}
+                };
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    responseMessage = &quot;yay!&quot;;
+                }
+                else
+                {
+                    //check status code. usually it is access denied
+                    var statusCode = response.StatusCode;
+                    var message = response.Content.ReadAsStringAsync().Result;
+                    responseMessage = message;
+                }
+            }
+</pre>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+    <hr/>
+    <footer>
+        <div class="container-fluid">
+            <p>
+                &copy; Optum @DateTime.Now.Year, Inc. - All Rights Reserved
+                <span class="pull-right">
+                        <a class="btn btn-info" href="mailto:ses_azure_ops_dl@ds.uhc.com?subject=Azure Pack NAS Questions">Contact Us</a>
+                    </span>
+            </p>
+        </div>
+    </footer>
+</div>
+    
+</body>
+</html>
